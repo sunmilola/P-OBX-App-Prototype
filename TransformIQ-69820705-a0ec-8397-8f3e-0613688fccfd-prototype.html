@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Transformation Readiness Prototype (End-to-End)</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#121a33; --panel2:#0f1730; --text:#e9eeff; --muted:#aab4e6;
+      --line:#24305a; --accent:#7aa2ff; --good:#2fd67b; --warn:#ffcc66; --bad:#ff6b6b; --crit:#ff3b6b;
+      --chip:#1a2550;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:linear-gradient(180deg,#070b16 0%, #0b1020 60%, #070b16 100%);color:var(--text)}
+    header{padding:18px 16px;border-bottom:1px solid var(--line);background:rgba(12,16,35,.7);backdrop-filter: blur(8px);position:sticky;top:0;z-index:10}
+    header h1{margin:0;font-size:18px;letter-spacing:.2px}
+    header .sub{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.3}
+    main{padding:16px;max-width:1280px;margin:0 auto}
+    .grid{display:grid;gap:12px}
+    .grid.cols2{grid-template-columns: 1.1fr .9fr}
+    .grid.cols3{grid-template-columns: 1fr 1fr 1fr}
+    @media (max-width: 980px){
+      .grid.cols2,.grid.cols3{grid-template-columns:1fr}
+      header{position:static}
+    }
+    .card{background:linear-gradient(180deg,rgba(18,26,51,.9),rgba(15,23,48,.9));border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+    .card h2{margin:0 0 10px 0;font-size:14px;color:var(--text);letter-spacing:.2px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .row.between{justify-content:space-between}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:7px 10px;border-radius:999px;background:rgba(26,37,80,.65);border:1px solid rgba(122,162,255,.18);color:var(--text);font-size:12px}
+    .pill b{font-size:12px}
+    .btn{appearance:none;border:1px solid rgba(122,162,255,.35);background:rgba(122,162,255,.14);color:var(--text);
+      padding:8px 10px;border-radius:10px;cursor:pointer;font-size:12px}
+    .btn:hover{background:rgba(122,162,255,.22)}
+    .btn.ghost{background:transparent;border-color:rgba(170,180,230,.25)}
+    .btn.danger{border-color:rgba(255,107,107,.55);background:rgba(255,107,107,.12)}
+    .btn.danger:hover{background:rgba(255,107,107,.18)}
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .tiny{font-size:11px}
+    .sep{height:1px;background:var(--line);margin:10px 0}
+    .kv{display:grid;grid-template-columns: 1fr auto;gap:8px;align-items:center}
+    .kv label{color:var(--muted);font-size:12px}
+    input[type="number"], input[type="text"], select{
+      width:100%;padding:8px 10px;border-radius:10px;border:1px solid rgba(170,180,230,.22);
+      background:rgba(9,13,30,.6);color:var(--text);outline:none
+    }
+    input[type="checkbox"]{transform: translateY(1px)}
+    .table{width:100%;border-collapse:separate;border-spacing:0 10px}
+    .table th{font-size:11px;color:var(--muted);font-weight:600;text-align:left;padding:0 10px}
+    .table td{padding:10px;border-top:1px solid rgba(36,48,90,.85);border-bottom:1px solid rgba(36,48,90,.85);background:rgba(9,13,30,.35)}
+    .table td:first-child{border-left:1px solid rgba(36,48,90,.85);border-radius:12px 0 0 12px}
+    .table td:last-child{border-right:1px solid rgba(36,48,90,.85);border-radius:0 12px 12px 0}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    details{border:1px dashed rgba(170,180,230,.22);border-radius:12px;padding:10px;background:rgba(9,13,30,.25)}
+    details summary{cursor:pointer;color:var(--accent);font-size:12px}
+    .tag{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;border:1px solid rgba(170,180,230,.18);background:rgba(18,26,51,.5);font-size:11px;color:var(--muted)}
+    .tag.good{border-color:rgba(47,214,123,.25);color:#bff5d6}
+    .tag.warn{border-color:rgba(255,204,102,.25);color:#ffe7b3}
+    .tag.bad{border-color:rgba(255,107,107,.25);color:#ffd0d0}
+    .tag.crit{border-color:rgba(255,59,107,.25);color:#ffc3d4}
+
+    .heatmap{display:grid;grid-template-columns: repeat(4, 1fr);gap:10px}
+    @media (max-width: 980px){ .heatmap{grid-template-columns:1fr 1fr} }
+    @media (max-width: 520px){ .heatmap{grid-template-columns:1fr} }
+    .hmCell{border:1px solid rgba(170,180,230,.18);border-radius:14px;padding:10px;background:rgba(9,13,30,.35)}
+    .hmTop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+    .hmTitle{font-size:12px}
+    .hmScore{font-size:12px;color:var(--muted)}
+    .bar{height:10px;border-radius:999px;background:rgba(170,180,230,.12);overflow:hidden;margin-top:8px;border:1px solid rgba(170,180,230,.12)}
+    .bar > span{display:block;height:100%;width:0%}
+    .state{font-size:14px}
+    .stateBox{padding:10px;border-radius:14px;border:1px solid rgba(170,180,230,.18);background:rgba(9,13,30,.35)}
+    .callout{padding:10px;border-radius:14px;border:1px solid rgba(122,162,255,.25);background:rgba(122,162,255,.08)}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .item{border:1px solid rgba(170,180,230,.18);border-radius:14px;padding:10px;background:rgba(9,13,30,.35)}
+    .itemTop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .kbd{font-size:11px;border:1px solid rgba(170,180,230,.22);background:rgba(9,13,30,.45);padding:2px 6px;border-radius:6px;color:var(--muted)}
+    .footer{margin-top:16px;color:var(--muted);font-size:11px}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Transformation Readiness Prototype</h1>
+  <div class="sub">
+    End-to-end journey: <span class="kbd">enter methodology/component scores</span> → <span class="kbd">domain roll-up</span> →
+    <span class="kbd">readiness state</span> + <span class="kbd">risk heatmap</span> + <span class="kbd">remediation priorities</span> + <span class="kbd">scope recommendation</span>.
+  </div>
+</header>
+
+<main class="grid cols2">
+
+  <!-- LEFT: INPUT + SCORING -->
+  <section class="card">
+    <div class="row between">
+      <h2>1) Input: Domains, Methodologies, Scores</h2>
+      <div class="row">
+        <button class="btn ghost" id="btnLoadDemo">Load demo scores</button>
+        <button class="btn ghost" id="btnClear">Clear</button>
+        <button class="btn" id="btnSave">Save (local)</button>
+        <button class="btn ghost" id="btnLoad">Load (local)</button>
+        <button class="btn" id="btnExport">Export JSON</button>
+        <button class="btn ghost" id="btnImport">Import JSON</button>
+      </div>
+    </div>
+
+    <div class="sep"></div>
+
+    <details open>
+      <summary><b>Scoring settings</b> (thresholds, weights, penalties)</summary>
+      <div class="sep"></div>
+
+      <div class="grid cols3">
+        <div class="kv">
+          <label>Critical threshold (Tcrit)</label>
+          <input type="number" step="0.1" min="1" max="5" id="Tcrit" value="2.5" />
+        </div>
+        <div class="kv">
+          <label>Viable threshold (Tviable)</label>
+          <input type="number" step="0.1" min="1" max="5" id="Tviable" value="2.8" />
+        </div>
+        <div class="kv">
+          <label>Strength threshold (Tstr)</label>
+          <input type="number" step="0.1" min="1" max="5" id="Tstr" value="4.0" />
+        </div>
+
+        <div class="kv">
+          <label>Vulnerability penalty (λ)</label>
+          <input type="number" step="0.1" min="0" max="2" id="lambda" value="0.5" />
+        </div>
+        <div class="kv">
+          <label>Strength boost (μ)</label>
+          <input type="number" step="0.1" min="0" max="2" id="mu" value="0.2" />
+        </div>
+        <div class="kv">
+          <label>Cap allowance (δ)</label>
+          <input type="number" step="0.1" min="0" max="2" id="delta" value="0.5" />
+        </div>
+      </div>
+
+      <div class="sep"></div>
+      <div class="row between">
+        <div class="muted small">
+          Governors: Domains 1, 3, 4, 7 (cap readiness if weak). Amplifiers: 2, 5, 6, 8.
+        </div>
+        <div class="row">
+          <span class="tag">Governors weight each: <span class="mono" id="wgGov">0.15</span></span>
+          <span class="tag">Amplifiers weight each: <span class="mono" id="wgAmp">0.10</span></span>
+        </div>
+      </div>
+    </details>
+
+    <div class="sep"></div>
+
+    <div id="domainsContainer"></div>
+
+    <div class="footer">
+      Tip: Expand a methodology to score components directly (optional). If you don’t score components, you can enter a methodology score directly.
+    </div>
+  </section>
+
+  <!-- RIGHT: OUTPUTS -->
+  <section class="grid" style="gap:12px">
+
+    <section class="card">
+      <h2>2) Output: Transformation Readiness State</h2>
+      <div class="stateBox" id="readinessBox">
+        <div class="row between">
+          <div>
+            <div class="state" id="stateLabel">—</div>
+            <div class="muted small" id="stateExplain">Enter scores to calculate readiness.</div>
+          </div>
+          <div class="pill">
+            <span class="muted">Overall (capped)</span>
+            <b class="mono" id="overallCapped">—</b>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="row">
+          <span class="tag" id="hardStopTag">No hard-stop detected</span>
+          <span class="tag" id="capTag">Cap not applied</span>
+          <span class="tag" id="weakGovTag">Weakest governor: —</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3) Output: Domain Risk Heatmap</h2>
+      <div class="muted tiny" style="margin-bottom:10px">
+        Heatmap shows risk concentration using: score deficit + vulnerability intensity + governor factor − strength intensity.
+      </div>
+      <div class="heatmap" id="heatmap"></div>
+    </section>
+
+    <section class="card">
+      <h2>4) Output: Remediation Priority Map</h2>
+      <div class="callout small">
+        Ranked list of “what to fix first” using: <span class="mono">Impact × Urgency ÷ Effort</span>.
+        Mark a remediation as “engaged” to see risk and readiness update.
+      </div>
+      <div class="sep"></div>
+      <div class="list" id="remediationList"></div>
+    </section>
+
+    <section class="card">
+      <h2>5) Output: Transformation Scope Recommendation</h2>
+      <div class="stateBox" id="scopeBox">
+        <div class="row between">
+          <div>
+            <div class="state" id="scopeLabel">—</div>
+            <div class="muted small" id="scopeExplain">Calculated from readiness + weakest governors + risk concentration.</div>
+          </div>
+          <div class="pill">
+            <span class="muted">Ambition</span>
+            <b class="mono" id="ambitionScore">—</b>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="small" id="scopeActions">—</div>
+      </div>
+    </section>
+
+  </section>
+
+</main>
+
+<!-- IMPORT MODAL (simple) -->
+<input type="file" id="fileInput" accept="application/json" style="display:none" />
+
+<script>
+(function(){
+  // ---------- Model ----------
+  const GOVERNORS = new Set([1,3,4,7]);
+
+  // Domain + Methodology names from your matrix (Domain 8 titled Cross-Cutting Knowledge Areas)
+  const MODEL = [
+    { id: 1, name: "Business Fundamentals Understanding", methods: [
+      "Value Chain Analysis Methodology",
+      "Revenue Model Analysis Methodology",
+      "Cost Structure Analysis Methodology",
+      "Competitive Landscape Analysis Methodology",
+      "Regulatory Environment Navigation Methodology"
+    ]},
+    { id: 2, name: "Business Strategy & Goals Understanding", methods: [
+      "Strategic Priorities Alignment Methodology",
+      "Growth Strategy Enablement Methodology",
+      "Customer Strategy Enablement Methodology",
+      "Operational Excellence Enablement Methodology",
+      "Innovation Agenda Alignment Methodology"
+    ]},
+    { id: 3, name: "Business Processes & Operations Understanding", methods: [
+      "Core Business Process Analysis Methodology",
+      "Decision-Making Framework Enhancement Methodology",
+      "Performance Metrics & KPI Enablement Methodology",
+      "Customer Journey Enhancement Methodology",
+      "Supply Chain & Partnership Integration Methodology"
+    ]},
+    { id: 4, name: "IT Alignment Assessment", methods: [
+      "Technology Portfolio Assessment Methodology",
+      "IT Operating Model Design Methodology",
+      "Technical Debt Management Methodology",
+      "Digital Maturity Assessment Methodology",
+      "IT Investment Optimization Methodology"
+    ]},
+    { id: 5, name: "Stakeholder Understanding", methods: [
+      "Executive Priority Alignment Methodology",
+      "Business Unit Needs Assessment Methodology",
+      "Technology Pain Point Identification Methodology",
+      "Shadow IT Assessment Methodology",
+      "IT Perception Management Methodology"
+    ]},
+    { id: 6, name: "Industry-Specific Technology Drivers", methods: [
+      "Technology Disruption Vectors Methodology",
+      "Competitive Technology Assessment Methodology",
+      "Industry-Specific Application Strategy Methodology",
+      "Data Asset Management Methodology",
+      "Technology Ecosystem Management Methodology"
+    ]},
+    { id: 7, name: "Risk & Compliance Landscape", methods: [
+      "Security Requirements Assessment Methodology",
+      "Compliance Obligation Management Methodology",
+      "Business Continuity Planning Methodology",
+      "Data Governance Requirements Methodology",
+      "Audit and Control Management Methodology"
+    ]},
+    { id: 8, name: "Cross-Cutting Knowledge Areas", methods: [
+      "Financial Management for Technology Leaders Methodology",
+      "Change Management for Technology Leaders Methodology",
+      "Innovation Management for Technology Leaders Methodology",
+      "Business Architecture for Technology Leaders Methodology",
+      "Leadership Development for Technology Executives Methodology"
+    ]}
+  ];
+
+  // Create mutable state with defaults
+  function makeDefaultState(){
+    const domains = MODEL.map(d => ({
+      id: d.id,
+      name: d.name,
+      weight: GOVERNORS.has(d.id) ? 0.15 : 0.10,
+      methods: d.methods.map((mName, idx) => ({
+        id: `${d.id}-${idx+1}`,
+        name: mName,
+        weight: 0.20,
+        // Option A: enter methodology score directly
+        manualScore: 3.0,
+        // Option B: compute from component scores (optional)
+        useComponents: false,
+        components: [
+          { name: "Component A", score: 3.0, weight: 0.34 },
+          { name: "Component B", score: 3.0, weight: 0.33 },
+          { name: "Component C", score: 3.0, weight: 0.33 },
+        ],
+        effort: 3,          // 1 (easy) .. 5 (hard)
+        engaged: false       // remediation engaged?
+      }))
+    }));
+    return { version: 1, domains };
+  }
+
+  let STATE = makeDefaultState();
+
+  // ---------- Helpers ----------
+  const clamp = (x, lo, hi) => Math.max(lo, Math.min(hi, x));
+  const round2 = (x) => Math.round(x * 100) / 100;
+
+  function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
+  function weightedAvg(items, getX, getW){
+    const W = sum(items.map(getW));
+    if (W === 0) return 0;
+    return sum(items.map(it => getX(it) * getW(it))) / W;
+  }
+  function normalizeWeights(items, getW, setW){
+    let total = sum(items.map(getW));
+    if (total <= 0){
+      const w = 1 / items.length;
+      items.forEach(it => setW(it, w));
+      return;
+    }
+    items.forEach(it => setW(it, getW(it) / total));
+  }
+
+  // ---------- Scoring Engine ----------
+  function settings(){
+    return {
+      Tcrit: parseFloat(document.getElementById("Tcrit").value),
+      Tviable: parseFloat(document.getElementById("Tviable").value),
+      Tstr: parseFloat(document.getElementById("Tstr").value),
+      lambda: parseFloat(document.getElementById("lambda").value),
+      mu: parseFloat(document.getElementById("mu").value),
+      delta: parseFloat(document.getElementById("delta").value),
+    };
+  }
+
+  function methodScore(method){
+    if (method.useComponents){
+      normalizeWeights(method.components, c=>c.weight, (c,w)=>c.weight=w);
+      const s = weightedAvg(method.components, c=>clamp(parseFloat(c.score)||1,1,5), c=>clamp(parseFloat(c.weight)||0,0,1));
+      return clamp(s,1,5);
+    }
+    return clamp(parseFloat(method.manualScore)||1,1,5);
+  }
+
+  function methodVulnerability(method, cfg){
+    // Cliff logic based on components if used; otherwise infer vulnerability from manualScore vs Tcrit
+    if (method.useComponents){
+      const scores = method.components.map(c => clamp(parseFloat(c.score)||1,1,5));
+      const below = scores.filter(x => x < cfg.Tcrit).length;
+      return (Math.min(...scores) < cfg.Tcrit) || (below >= 2);
+    } else {
+      // manual vulnerability: treat as vulnerable if score < Tcrit (conservative)
+      return methodScore(method) < cfg.Tcrit;
+    }
+  }
+
+  function methodStrength(method, cfg){
+    return methodScore(method) >= cfg.Tstr;
+  }
+
+  function domainCalc(domain, cfg){
+    normalizeWeights(domain.methods, m=>m.weight, (m,w)=>m.weight=w);
+
+    const base = weightedAvg(domain.methods, m=>methodScore(m), m=>m.weight);
+
+    const Vd = sum(domain.methods.map(m => (methodVulnerability(m,cfg) ? 1 : 0) * m.weight));
+    const Sd = sum(domain.methods.map(m => (methodStrength(m,cfg) ? 1 : 0) * m.weight));
+
+    // Remediation engagement: if engaged, reduce vulnerability penalty effect for that methodology
+    // Simple model: engaged lowers V contribution by 40% (tunable)
+    const engagedReduction = 0.40;
+    const VdEffective = sum(domain.methods.map(m => {
+      const v = methodVulnerability(m,cfg) ? 1 : 0;
+      const eff = m.engaged ? v * (1 - engagedReduction) : v;
+      return eff * m.weight;
+    }));
+
+    const D = clamp(base - cfg.lambda * VdEffective + cfg.mu * Sd, 1, 5);
+
+    return { base: round2(base), Vd: round2(Vd), VdEffective: round2(VdEffective), Sd: round2(Sd), D: round2(D) };
+  }
+
+  function overallCalc(cfg){
+    // normalize domain weights to sum to 1
+    normalizeWeights(STATE.domains, d=>d.weight, (d,w)=>d.weight=w);
+
+    const domainResults = STATE.domains.map(d => ({ ...d, calc: domainCalc(d,cfg) }));
+
+    const R = weightedAvg(domainResults, d=>d.calc.D, d=>d.weight);
+
+    // Hard stop: any governor domain < 2.0
+    const govResults = domainResults.filter(d => GOVERNORS.has(d.id));
+    const weakestGov = govResults.reduce((min, d) => d.calc.D < min.calc.D ? d : min, govResults[0]);
+    const hardStop = govResults.some(d => d.calc.D < 2.0);
+
+    // Cap rule
+    const Fmin = Math.min(...govResults.map(d => d.calc.D));
+    const Rcapped = Math.min(R, Fmin + cfg.delta);
+
+    // Readiness state thresholds
+    const state = readinessState(Rcapped, hardStop);
+
+    return {
+      domains: domainResults,
+      R: round2(R),
+      Fmin: round2(Fmin),
+      weakestGov,
+      hardStop,
+      Rcapped: round2(Rcapped),
+      cappedApplied: round2(Rcapped) < round2(R),
+      state
+    };
+  }
+
+  function readinessState(Rcapped, hardStop){
+    if (hardStop) return { level: 1, label: "Structurally Unready", color: "var(--crit)" };
+    if (Rcapped < 2.0) return { level: 1, label: "Structurally Unready", color: "var(--crit)" };
+    if (Rcapped < 2.8) return { level: 2, label: "Fragile Readiness", color: "var(--bad)" };
+    if (Rcapped < 3.5) return { level: 3, label: "Managed Transformation Readiness", color: "var(--warn)" };
+    if (Rcapped < 4.2) return { level: 4, label: "Strong Transformation Readiness", color: "var(--good)" };
+    return { level: 5, label: "Adaptive Enterprise", color: "var(--accent)" };
+  }
+
+  function domainRisk(domainRes){
+    // Risk_d = (5-D) + 2Vd + 0.5G - 0.5Sd
+    const G = GOVERNORS.has(domainRes.id) ? 1 : 0;
+    const D = domainRes.calc.D;
+    const V = domainRes.calc.VdEffective ?? domainRes.calc.Vd;
+    const S = domainRes.calc.Sd;
+    const risk = (5 - D) + 2 * V + 0.5 * G - 0.5 * S;
+    return round2(risk);
+  }
+
+  function riskBand(r){
+    if (r > 5.5) return { label:"Critical", color:"var(--crit)" };
+    if (r >= 4.0) return { label:"High", color:"var(--bad)" };
+    if (r >= 2.5) return { label:"Medium", color:"var(--warn)" };
+    return { label:"Low", color:"var(--good)" };
+  }
+
+  function remediationPriorities(overall, cfg){
+    // Priority_m = (Impact × Urgency) / Effort
+    // Impact = A_d * W_dm * (1 + 0.25*G)
+    // Urgency = (5 - M_m) + 2*V_m
+    const rows = [];
+    overall.domains.forEach(d => {
+      const Ad = d.weight; // already normalized
+      const G = GOVERNORS.has(d.id) ? 1 : 0;
+      d.methods.forEach(m => {
+        const M = methodScore(m);
+        const V = methodVulnerability(m,cfg) ? 1 : 0;
+        const impact = Ad * m.weight * (1 + 0.25 * G);
+        const urgency = (5 - M) + 2 * V;
+        const effort = clamp(parseFloat(m.effort)||3,1,5);
+        const priority = (impact * urgency) / effort;
+        rows.push({
+          domainId: d.id,
+          domainName: d.name,
+          methodId: m.id,
+          methodName: m.name,
+          score: round2(M),
+          vulnerable: !!V,
+          engaged: !!m.engaged,
+          effort,
+          impact: round2(impact),
+          urgency: round2(urgency),
+          priority: round2(priority),
+          governor: !!G
+        });
+      });
+    });
+
+    // Auto-boost: vulnerable methodology inside governor domain should float to top
+    rows.sort((a,b)=>{
+      const aBoost = (a.governor && a.vulnerable) ? 1 : 0;
+      const bBoost = (b.governor && b.vulnerable) ? 1 : 0;
+      if (aBoost !== bBoost) return bBoost - aBoost;
+      return b.priority - a.priority;
+    });
+
+    return rows;
+  }
+
+  function ambition(overall, cfg){
+    // Ambition = Rcapped - eta * maxRiskGovernor (small penalty)
+    const eta = 0.05;
+    const gov = overall.domains.filter(d => GOVERNORS.has(d.id));
+    const maxRiskGov = Math.max(...gov.map(d => domainRisk(d)));
+    return round2(overall.Rcapped - eta * maxRiskGov);
+  }
+
+  function scopeRecommendation(overall, cfg){
+    const amb = ambition(overall,cfg);
+    let level;
+    if (overall.state.level === 1) level = 1;
+    else if (amb < 2.0) level = 1;
+    else if (amb < 2.8) level = 2;
+    else if (amb < 3.5) level = 3;
+    else if (amb < 4.2) level = 4;
+    else level = 5;
+
+    // Reducers based on governor weakness
+    const govScores = overall.domains.filter(d => GOVERNORS.has(d.id)).map(d => d.calc.D);
+    const anyGovBelowViable = govScores.some(x => x < cfg.Tviable);
+    const govBelow3 = govScores.filter(x => x < 3.0).length;
+
+    if (anyGovBelowViable) level = Math.max(1, level - 1);
+    if (govBelow3 >= 2) level = Math.max(1, level - 1);
+
+    const labels = {
+      1: "Capability Building Only",
+      2: "Narrow Pilots with Strong Controls",
+      3: "Sequenced Waves with Managed Parallelism",
+      4: "Enterprise Scaling with Decentralised Execution",
+      5: "Continuous Transformation Posture"
+    };
+
+    const actions = {
+      1: [
+        "Stabilise foundational domains before scaling change (focus: economics, operability, tech constraints, risk controls).",
+        "Prioritise remediation on top vulnerabilities; avoid parallel programmes.",
+        "Use the model to build a credible transformation thesis and governance design."
+      ],
+      2: [
+        "Run 1–2 value-stream pilots; tightly control scope and dependencies.",
+        "Fund remediation alongside delivery; prevent portfolio overload.",
+        "Use pilots to validate economics, adoption, and control patterns."
+      ],
+      3: [
+        "Execute in waves; limit parallel initiatives; protect operations during change.",
+        "Use remediation priorities to increase speed and reduce rework.",
+        "Strengthen stakeholder alignment and delivery predictability as you scale."
+      ],
+      4: [
+        "Scale across multiple value streams; allow higher parallelism where domains are strong.",
+        "Decentralise execution with clear guardrails (risk, architecture, funding).",
+        "Use strengths to accelerate sequencing and shorten feedback loops."
+      ],
+      5: [
+        "Operate continuous change: experiment + scale as a normal operating mode.",
+        "Invest in optionality (platform, data, ecosystem) and leadership endurance.",
+        "Keep risk/compliance integrated so pace stays sustainable."
+      ]
+    };
+
+    return { amb, level, label: labels[level], actions: actions[level], reducers: { anyGovBelowViable, govBelow3 } };
+  }
+
+  // ---------- UI Rendering ----------
+  const container = document.getElementById("domainsContainer");
+
+  function render(){
+    container.innerHTML = "";
+    // Update displayed default weights
+    document.getElementById("wgGov").textContent = "0.15";
+    document.getElementById("wgAmp").textContent = "0.10";
+
+    STATE.domains.forEach(domain => {
+      const card = document.createElement("div");
+      card.className = "item";
+      card.innerHTML = `
+        <div class="itemTop">
+          <div>
+            <div class="small"><b>Domain ${domain.id}:</b> ${escapeHtml(domain.name)}</div>
+            <div class="muted tiny">Weight in overall readiness: <span class="mono" id="dw-${domain.id}">${domain.weight.toFixed(2)}</span> ${GOVERNORS.has(domain.id) ? '<span class="tag warn" style="margin-left:8px">Governor</span>' : '<span class="tag" style="margin-left:8px">Amplifier</span>'}</div>
+          </div>
+          <div class="right">
+            <span class="tag">Domain weight</span>
+            <input type="number" step="0.01" min="0" max="1" value="${domain.weight.toFixed(2)}" style="width:90px" data-domain-weight="${domain.id}">
+            <button class="btn ghost" data-normalize-domain="${domain.id}">Normalise method weights</button>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:38%">Methodology</th>
+              <th style="width:10%">W</th>
+              <th style="width:12%">Score</th>
+              <th style="width:12%">Effort</th>
+              <th style="width:12%">Remediation</th>
+              <th style="width:16%">Details</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-${domain.id}"></tbody>
+        </table>
+      `;
+      container.appendChild(card);
+
+      const tbody = card.querySelector(`#tbody-${domain.id}`);
+
+      domain.methods.forEach(method => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><div class="small"><b>${escapeHtml(method.name)}</b></div><div class="muted tiny mono">${method.id}</div></td>
+          <td>
+            <input type="number" step="0.01" min="0" max="1" value="${method.weight.toFixed(2)}" style="width:90px" data-method-weight="${domain.id}|${method.id}">
+          </td>
+          <td>
+            <div class="row" style="gap:8px">
+              <input type="number" step="0.1" min="1" max="5" value="${method.manualScore.toFixed(1)}" style="width:90px" data-method-score="${domain.id}|${method.id}" ${method.useComponents ? 'disabled' : ''}>
+              <label class="tiny muted"><input type="checkbox" data-use-components="${domain.id}|${method.id}" ${method.useComponents ? 'checked' : ''}> use components</label>
+            </div>
+          </td>
+          <td>
+            <select data-effort="${domain.id}|${method.id}">
+              ${[1,2,3,4,5].map(v => `<option value="${v}" ${v===method.effort?'selected':''}>${v}</option>`).join("")}
+            </select>
+          </td>
+          <td>
+            <label class="tiny"><input type="checkbox" data-engaged="${domain.id}|${method.id}" ${method.engaged?'checked':''}> engaged</label>
+          </td>
+          <td>
+            <details>
+              <summary>components</summary>
+              <div class="sep"></div>
+              <div class="muted tiny">Score 3 generic components (rename if you like). Weights auto-normalise.</div>
+              <div class="sep"></div>
+              ${method.components.map((c, idx) => `
+                <div class="grid" style="grid-template-columns: 1.3fr .8fr .6fr; gap:8px; margin-bottom:8px">
+                  <input type="text" value="${escapeAttr(c.name)}" data-comp-name="${domain.id}|${method.id}|${idx}">
+                  <input type="number" step="0.1" min="1" max="5" value="${Number(c.score).toFixed(1)}" data-comp-score="${domain.id}|${method.id}|${idx}">
+                  <input type="number" step="0.01" min="0" max="1" value="${Number(c.weight).toFixed(2)}" data-comp-weight="${domain.id}|${method.id}|${idx}">
+                </div>
+              `).join("")}
+              <div class="row between">
+                <button class="btn ghost" data-normalize-components="${domain.id}|${method.id}">Normalise component weights</button>
+                <span class="tag">Computed score: <span class="mono" id="computed-${domain.id}-${method.id}">—</span></span>
+              </div>
+            </details>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    });
+
+    bindInputs();
+    recalcAndRenderOutputs();
+  }
+
+  function bindInputs(){
+    // Domain weights
+    document.querySelectorAll("[data-domain-weight]").forEach(inp => {
+      inp.addEventListener("input", e => {
+        const id = parseInt(e.target.getAttribute("data-domain-weight"), 10);
+        const d = STATE.domains.find(x=>x.id===id);
+        d.weight = clamp(parseFloat(e.target.value)||0,0,1);
+        recalcAndRenderOutputs();
+      });
+    });
+
+    // Normalise method weights per domain
+    document.querySelectorAll("[data-normalize-domain]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        const id = parseInt(e.target.getAttribute("data-normalize-domain"),10);
+        const d = STATE.domains.find(x=>x.id===id);
+        d.methods.forEach(m => m.weight = 1 / d.methods.length);
+        render();
+      });
+    });
+
+    // Method weights
+    document.querySelectorAll("[data-method-weight]").forEach(inp => {
+      inp.addEventListener("input", e => {
+        const [domainId, methodId] = e.target.getAttribute("data-method-weight").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.weight = clamp(parseFloat(e.target.value)||0,0,1);
+        recalcAndRenderOutputs();
+      });
+    });
+
+    // Method score (manual)
+    document.querySelectorAll("[data-method-score]").forEach(inp => {
+      inp.addEventListener("input", e => {
+        const [domainId, methodId] = e.target.getAttribute("data-method-score").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.manualScore = clamp(parseFloat(e.target.value)||1,1,5);
+        recalcAndRenderOutputs();
+      });
+    });
+
+    // Use components
+    document.querySelectorAll("[data-use-components]").forEach(chk => {
+      chk.addEventListener("change", e => {
+        const [domainId, methodId] = e.target.getAttribute("data-use-components").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.useComponents = !!e.target.checked;
+        render();
+      });
+    });
+
+    // Effort
+    document.querySelectorAll("[data-effort]").forEach(sel => {
+      sel.addEventListener("change", e => {
+        const [domainId, methodId] = e.target.getAttribute("data-effort").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.effort = clamp(parseInt(e.target.value,10)||3,1,5);
+        recalcAndRenderOutputs();
+      });
+    });
+
+    // Engaged
+    document.querySelectorAll("[data-engaged]").forEach(chk => {
+      chk.addEventListener("change", e => {
+        const [domainId, methodId] = e.target.getAttribute("data-engaged").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.engaged = !!e.target.checked;
+        recalcAndRenderOutputs();
+      });
+    });
+
+    // Components
+    document.querySelectorAll("[data-comp-name]").forEach(inp => {
+      inp.addEventListener("input", e => {
+        const [domainId, methodId, idx] = e.target.getAttribute("data-comp-name").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.components[parseInt(idx,10)].name = e.target.value;
+      });
+    });
+    document.querySelectorAll("[data-comp-score]").forEach(inp => {
+      inp.addEventListener("input", e => {
+        const [domainId, methodId, idx] = e.target.getAttribute("data-comp-score").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.components[parseInt(idx,10)].score = clamp(parseFloat(e.target.value)||1,1,5);
+        recalcAndRenderOutputs();
+      });
+    });
+    document.querySelectorAll("[data-comp-weight]").forEach(inp => {
+      inp.addEventListener("input", e => {
+        const [domainId, methodId, idx] = e.target.getAttribute("data-comp-weight").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.components[parseInt(idx,10)].weight = clamp(parseFloat(e.target.value)||0,0,1);
+        recalcAndRenderOutputs();
+      });
+    });
+
+    document.querySelectorAll("[data-normalize-components]").forEach(btn => {
+      btn.addEventListener("click", e => {
+        const [domainId, methodId] = e.target.getAttribute("data-normalize-components").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        normalizeWeights(m.components, c=>c.weight, (c,w)=>c.weight=w);
+        render();
+      });
+    });
+
+    // Settings changes trigger recalc
+    ["Tcrit","Tviable","Tstr","lambda","mu","delta"].forEach(id=>{
+      document.getElementById(id).addEventListener("input", ()=>recalcAndRenderOutputs());
+    });
+  }
+
+  function recalcAndRenderOutputs(){
+    const cfg = settings();
+    const overall = overallCalc(cfg);
+
+    // Update computed methodology scores in UI
+    overall.domains.forEach(d=>{
+      d.methods.forEach(m=>{
+        const el = document.getElementById(`computed-${d.id}-${m.id}`);
+        if (el){
+          el.textContent = round2(methodScore(m)).toFixed(2);
+        }
+      });
+    });
+
+    // Output 1: readiness state
+    const stateLabel = document.getElementById("stateLabel");
+    const stateExplain = document.getElementById("stateExplain");
+    const overallCapped = document.getElementById("overallCapped");
+    stateLabel.textContent = `${overall.state.label}`;
+    stateLabel.style.color = overall.state.color;
+    overallCapped.textContent = overall.Rcapped.toFixed(2);
+
+    const weakest = overall.weakestGov ? `Domain ${overall.weakestGov.id} (${overall.weakestGov.name}) = ${overall.weakestGov.calc.D.toFixed(2)}` : "—";
+    document.getElementById("weakGovTag").textContent = `Weakest governor: ${weakest}`;
+
+    const hardStopTag = document.getElementById("hardStopTag");
+    hardStopTag.className = "tag";
+    if (overall.hardStop){
+      hardStopTag.classList.add("crit");
+      hardStopTag.textContent = "Hard stop: a governor domain is Critical (<2.0)";
+      stateExplain.textContent = "Readiness is structurally capped by a critical weakness in a foundational (governor) domain.";
+    } else {
+      hardStopTag.classList.add("good");
+      hardStopTag.textContent = "No hard-stop detected";
+      stateExplain.textContent = "Overall readiness is computed from domain scores and capped by weakest foundational domains.";
+    }
+
+    const capTag = document.getElementById("capTag");
+    capTag.className = "tag";
+    if (overall.cappedApplied){
+      capTag.classList.add("warn");
+      capTag.textContent = `Cap applied: overall ${overall.R.toFixed(2)} → capped ${overall.Rcapped.toFixed(2)}`;
+    } else {
+      capTag.classList.add("good");
+      capTag.textContent = "Cap not applied";
+    }
+
+    // Output 2: heatmap
+    const heatmap = document.getElementById("heatmap");
+    heatmap.innerHTML = "";
+    overall.domains.forEach(d=>{
+      const risk = domainRisk(d);
+      const band = riskBand(risk);
+      const pct = clamp((risk/7.0)*100, 0, 100); // simple visual scaling
+      const cell = document.createElement("div");
+      cell.className = "hmCell";
+      cell.innerHTML = `
+        <div class="hmTop">
+          <div>
+            <div class="hmTitle"><b>Domain ${d.id}:</b> ${escapeHtml(d.name)}</div>
+            <div class="hmScore muted tiny">Domain score: <span class="mono">${d.calc.D.toFixed(2)}</span> · V: <span class="mono">${d.calc.VdEffective.toFixed(2)}</span> · S: <span class="mono">${d.calc.Sd.toFixed(2)}</span></div>
+          </div>
+          <div class="right">
+            <span class="tag ${band.label==='Low'?'good':band.label==='Medium'?'warn':band.label==='High'?'bad':'crit'}">${band.label}</span>
+            ${GOVERNORS.has(d.id) ? '<span class="tag warn">Governor</span>' : '<span class="tag">Amplifier</span>'}
+          </div>
+        </div>
+        <div class="bar"><span style="width:${pct}%;background:${band.color}"></span></div>
+        <div class="muted tiny" style="margin-top:8px">Risk score: <span class="mono">${risk.toFixed(2)}</span></div>
+      `;
+      heatmap.appendChild(cell);
+    });
+
+    // Output 3: remediation list
+    const remList = document.getElementById("remediationList");
+    remList.innerHTML = "";
+    const priorities = remediationPriorities(overall, cfg).slice(0, 14); // top N
+    priorities.forEach(p=>{
+      const item = document.createElement("div");
+      item.className = "item";
+      const riskTag = p.vulnerable ? `<span class="tag bad">Vulnerable</span>` : `<span class="tag good">Stable</span>`;
+      const govTag = p.governor ? `<span class="tag warn">Governor impact</span>` : `<span class="tag">Amplifier impact</span>`;
+      item.innerHTML = `
+        <div class="itemTop">
+          <div>
+            <div class="small"><b>${escapeHtml(p.methodName)}</b></div>
+            <div class="muted tiny">Domain ${p.domainId}: ${escapeHtml(p.domainName)}</div>
+            <div class="muted tiny">Score <span class="mono">${p.score.toFixed(2)}</span> · Effort <span class="mono">${p.effort}</span> · Impact <span class="mono">${p.impact.toFixed(3)}</span> · Urgency <span class="mono">${p.urgency.toFixed(2)}</span></div>
+          </div>
+          <div class="right">
+            ${riskTag}
+            ${govTag}
+            <span class="tag">Priority <span class="mono">${p.priority.toFixed(3)}</span></span>
+          </div>
+        </div>
+        <div class="sep"></div>
+        <div class="row between">
+          <div class="muted tiny mono">${p.methodId}</div>
+          <label class="tiny">
+            <input type="checkbox" data-toggle-engaged="${p.domainId}|${p.methodId}" ${p.engaged?'checked':''}>
+            remediation engaged
+          </label>
+        </div>
+      `;
+      remList.appendChild(item);
+    });
+
+    remList.querySelectorAll("[data-toggle-engaged]").forEach(chk=>{
+      chk.addEventListener("change", e=>{
+        const [domainId, methodId] = e.target.getAttribute("data-toggle-engaged").split("|");
+        const d = STATE.domains.find(x=>x.id===parseInt(domainId,10));
+        const m = d.methods.find(x=>x.id===methodId);
+        m.engaged = !!e.target.checked;
+        recalcAndRenderOutputs();
+      });
+    });
+
+    // Output 4: scope recommendation
+    const sc = scopeRecommendation(overall, cfg);
+    document.getElementById("ambitionScore").textContent = sc.amb.toFixed(2);
+    const scopeLabel = document.getElementById("scopeLabel");
+    scopeLabel.textContent = sc.label;
+    scopeLabel.style.color = ["var(--crit)","var(--bad)","var(--warn)","var(--good)","var(--accent)"][sc.level-1];
+
+    const scopeActions = document.getElementById("scopeActions");
+    scopeActions.innerHTML = `
+      <ul class="small" style="margin:0;padding-left:18px;line-height:1.4">
+        ${sc.actions.map(a=>`<li>${escapeHtml(a)}</li>`).join("")}
+      </ul>
+      <div class="sep"></div>
+      <div class="muted tiny">
+        Scope modifiers applied:
+        ${sc.reducers.anyGovBelowViable ? '<span class="tag warn">reduced (a governor below viable)</span>' : '<span class="tag good">no governor-below-viable reduction</span>'}
+        ${sc.reducers.govBelow3>=2 ? '<span class="tag warn">reduced (≥2 governors below 3.0)</span>' : '<span class="tag good">no multi-governor reduction</span>'}
+      </div>
+    `;
+  }
+
+  // ---------- Persistence / Demo ----------
+  const KEY = "tr_proto_state_v1";
+
+  document.getElementById("btnSave").addEventListener("click", ()=>{
+    localStorage.setItem(KEY, JSON.stringify(STATE));
+    toast("Saved to browser (local).");
+  });
+  document.getElementById("btnLoad").addEventListener("click", ()=>{
+    const raw = localStorage.getItem(KEY);
+    if (!raw){ toast("No saved state found."); return; }
+    try{
+      STATE = JSON.parse(raw);
+      toast("Loaded from browser (local).");
+      render();
+    }catch(err){ toast("Failed to load saved state."); }
+  });
+
+  document.getElementById("btnClear").addEventListener("click", ()=>{
+    STATE = makeDefaultState();
+    toast("Cleared.");
+    render();
+  });
+
+  document.getElementById("btnLoadDemo").addEventListener("click", ()=>{
+    STATE = makeDefaultState();
+    // Demo: create a realistic spread (strong business basics, weaker IT alignment + stakeholder, ok risk)
+    const setMethod = (dId, mIdx, score, effort=3, useComps=false)=> {
+      const d = STATE.domains.find(x=>x.id===dId);
+      const m = d.methods[mIdx];
+      m.useComponents = useComps;
+      m.manualScore = score;
+      m.effort = effort;
+      if (useComps){
+        m.components[0].score = clamp(score-0.3,1,5);
+        m.components[1].score = clamp(score,1,5);
+        m.components[2].score = clamp(score+0.2,1,5);
+      }
+    };
+    // Domain 1 strong
+    [3.8,3.7,3.6,3.5,3.4].forEach((s,i)=>setMethod(1,i,s,3,true));
+    // Domain 2 mixed
+    [3.3,3.2,3.5,3.0,3.1].forEach((s,i)=>setMethod(2,i,s,3,false));
+    // Domain 3 decent
+    [3.4,3.0,3.2,3.3,3.1].forEach((s,i)=>setMethod(3,i,s,3,true));
+    // Domain 4 weak (tech drag)
+    [2.6,2.7,2.2,2.8,2.6].forEach((s,i)=>setMethod(4,i,s,4,true));
+    // Domain 5 weak-ish (adoption risk)
+    [2.8,2.6,2.5,2.3,2.7].forEach((s,i)=>setMethod(5,i,s,3,false));
+    // Domain 6 medium
+    [3.0,2.9,3.1,3.0,2.8].forEach((s,i)=>setMethod(6,i,s,3,false));
+    // Domain 7 medium-strong
+    [3.2,3.1,3.4,3.2,3.0].forEach((s,i)=>setMethod(7,i,s,3,true));
+    // Domain 8 medium
+    [3.0,2.9,3.1,3.0,2.8].forEach((s,i)=>setMethod(8,i,s,3,false));
+
+    toast("Loaded demo scores.");
+    render();
+  });
+
+  document.getElementById("btnExport").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(STATE,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "transformation_readiness_state.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  document.getElementById("btnImport").addEventListener("click", ()=>{
+    document.getElementById("fileInput").click();
+  });
+
+  document.getElementById("fileInput").addEventListener("change", (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const obj = JSON.parse(reader.result);
+        STATE = obj;
+        toast("Imported JSON.");
+        render();
+      }catch(err){
+        toast("Import failed (invalid JSON).");
+      }finally{
+        e.target.value = "";
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // ---------- Tiny toast ----------
+  function toast(msg){
+    const t = document.createElement("div");
+    t.textContent = msg;
+    t.style.position="fixed";
+    t.style.right="14px";
+    t.style.bottom="14px";
+    t.style.padding="10px 12px";
+    t.style.borderRadius="12px";
+    t.style.background="rgba(18,26,51,.95)";
+    t.style.border="1px solid rgba(170,180,230,.22)";
+    t.style.color="var(--text)";
+    t.style.fontSize="12px";
+    t.style.boxShadow="0 12px 30px rgba(0,0,0,.35)";
+    t.style.zIndex="9999";
+    document.body.appendChild(t);
+    setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .25s"; }, 1400);
+    setTimeout(()=>{ t.remove(); }, 1750);
+  }
+
+  // ---------- Escaping ----------
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+  function escapeAttr(str){ return escapeHtml(str).replace(/"/g,'&quot;'); }
+
+  // ---------- Boot ----------
+  render();
+
+})();
+</script>
+</body>
+</html>
